@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwen3-TTS Demo | Voice Laboratory</title>
+    <meta name="description"
+        content="Interactive demo for Qwen3-TTS API - Generate speech with custom voices, voice design, and voice cloning">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon">Q3</div>
+                <div>
+                    <div class="logo-text" data-i18n="title">Qwen3-TTS</div>
+                    <div class="logo-version" data-i18n="subtitle">Voice Laboratory</div>
+                </div>
+            </div>
+            <div class="lang-switcher">
+                <button class="lang-btn active" data-lang="en" onclick="switchLanguage('en')">EN</button>
+                <button class="lang-btn" data-lang="zh-cn" onclick="switchLanguage('zh-cn')">中文</button>
+            </div>
+            <div class="status-indicator" id="status-indicator">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-text" id="status-text">Checking...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Tab Navigation -->
+            <nav class="tabs" role="tablist">
+                <button class="tab-btn active" data-tab="custom-voice" role="tab" aria-selected="true"
+                    data-i18n="customVoice">
+                    Custom Voice
+                </button>
+                <button class="tab-btn" data-tab="voice-design" role="tab" aria-selected="false"
+                    data-i18n="voiceDesign">
+                    Voice Design
+                </button>
+                <button class="tab-btn" data-tab="voice-clone" role="tab" aria-selected="false" data-i18n="voiceClone">
+                    Voice Clone
+                </button>
+                <button class="tab-btn" data-tab="settings" role="tab" aria-selected="false" data-i18n="settings">
+                    Settings
+                </button>
+            </nav>
+
+            <!-- ==================== CUSTOM VOICE TAB ==================== -->
+            <section class="tab-panel active" id="panel-custom-voice" role="tabpanel">
+                <div class="section-header">
+                    <h1 class="section-title">Custom Voice</h1>
+                    <p class="section-description">Generate speech using 9 preset speakers with emotional control and
+                        style instructions</p>
+                </div>
+
+                <div class="two-column">
+                    <div>
+                        <!-- Text Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="cv-text">Text to Synthesize</label>
+                            <textarea class="form-textarea" id="cv-text"
+                                placeholder="Enter the text you want to convert to speech...">Hello, welcome to the Qwen3-TTS Voice Laboratory! This is a demonstration of AI-powered text-to-speech technology.</textarea>
+                            <div class="char-count"><span id="cv-char-count">0</span> chars</div>
+                        </div>
+
+                        <!-- Language -->
+                        <div class="form-group">
+                            <label class="form-label" for="cv-language">Language</label>
+                            <select class="form-select" id="cv-language">
+                                <option value="Auto">Auto Detect</option>
+                                <option value="Chinese">Chinese</option>
+                                <option value="English" selected>English</option>
+                                <option value="Japanese">Japanese</option>
+                                <option value="Korean">Korean</option>
+                                <option value="German">German</option>
+                                <option value="French">French</option>
+                                <option value="Russian">Russian</option>
+                                <option value="Portuguese">Portuguese</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="Italian">Italian</option>
+                            </select>
+                        </div>
+
+                        <!-- Instruction -->
+                        <div class="form-group">
+                            <label class="form-label" for="cv-instruct">Style Instruction (Optional)</label>
+                            <input type="text" class="form-input" id="cv-instruct"
+                                placeholder="e.g., Speak cheerfully, Calm and soothing...">
+                            <div class="quick-instructions">
+                                <button class="quick-instruction" data-value="Speak happily and with energy">Happy
+                                    😊</button>
+                                <button class="quick-instruction" data-value="Speak in a calm, soothing manner">Calm
+                                    😌</button>
+                                <button class="quick-instruction"
+                                    data-value="Speak with excitement and enthusiasm">Excited 🎉</button>
+                                <button class="quick-instruction"
+                                    data-value="Speak in a serious, professional tone">Serious 🧐</button>
+                                <button class="quick-instruction" data-value="Speak softly and gently">Soft 🌸</button>
+                            </div>
+                        </div>
+
+                        <!-- Speed -->
+                        <div class="form-group">
+                            <label class="form-label">Speed</label>
+                            <div class="range-container">
+                                <span class="range-value">0.5x</span>
+                                <input type="range" class="range-slider" id="cv-speed" min="0.5" max="2" step="0.1"
+                                    value="1">
+                                <span class="range-value" id="cv-speed-value">1.0x</span>
+                            </div>
+                        </div>
+
+                        <!-- Generate Button -->
+                        <button class="btn btn-primary" id="cv-generate-btn">
+                            <span>▶</span> Generate Speech
+                        </button>
+                    </div>
+
+                    <!-- Speaker Selection -->
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Select Speaker</label>
+                            <div class="speaker-grid" id="cv-speaker-grid">
+                                <!-- Speakers will be populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Player -->
+                <div class="audio-player-container" id="cv-audio-container">
+                    <div class="audio-player-header">
+                        <span class="audio-player-title">Generated Audio</span>
+                        <span class="audio-player-meta" id="cv-audio-meta"></span>
+                    </div>
+                    <div class="waveform-container" id="cv-waveform">
+                        <!-- Waveform bars will be generated by JS -->
+                    </div>
+                    <audio controls id="cv-audio-player"></audio>
+                    <div class="performance-metrics" id="cv-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Generation Time</span>
+                            <span class="metric-value" id="cv-metric-time">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Audio Duration</span>
+                            <span class="metric-value" id="cv-metric-duration">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">RTF</span>
+                            <span class="metric-value" id="cv-metric-rtf">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Voice -->
+                <div class="save-voice-container" id="cv-save-voice" style="display: none;">
+                    <div class="save-voice-row">
+                        <input type="text" class="form-input" id="cv-save-name" placeholder="Name this voice...">
+                        <button class="btn btn-secondary" id="cv-save-voice-btn">Save to Voice Library</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== VOICE DESIGN TAB ==================== -->
+            <section class="tab-panel" id="panel-voice-design" role="tabpanel">
+                <div class="section-header">
+                    <h1 class="section-title">Voice Design</h1>
+                    <p class="section-description">Design a custom voice using natural language descriptions — describe
+                        the voice you want to hear</p>
+                </div>
+
+                <div class="card">
+                    <!-- Example Prompts -->
+                    <div class="form-group">
+                        <label class="form-label">Example Voice Designs (click to use)</label>
+                        <div class="example-prompts">
+                            <button class="example-prompt"
+                                data-instruct="A warm, professional female voice with a slight British accent, speaking confidently and clearly">Professional
+                                British Woman</button>
+                            <button class="example-prompt"
+                                data-instruct="Deep male voice, calm and soothing, like a late-night radio host">Radio
+                                Host</button>
+                            <button class="example-prompt"
+                                data-instruct="Young energetic male voice, 20-25 years old, speaking with excitement">Energetic
+                                Young Man</button>
+                            <button class="example-prompt"
+                                data-instruct="Elderly wise grandmother voice, gentle and storytelling">Wise
+                                Grandmother</button>
+                            <button class="example-prompt"
+                                data-instruct="Robotic AI assistant voice, clear and precise">AI Assistant</button>
+                            <button class="example-prompt"
+                                data-instruct="Cheerful anime girl voice, high-pitched and cute">Anime
+                                Character</button>
+                        </div>
+                    </div>
+
+                    <!-- Voice Design Instruction -->
+                    <div class="form-group">
+                        <label class="form-label" for="vd-instruct">Voice Description</label>
+                        <textarea class="form-textarea" id="vd-instruct"
+                            placeholder="Describe the voice you want... e.g., 'A warm, friendly female voice with a slight Southern American accent, speaking at a moderate pace'">A warm, professional female voice with clear enunciation, speaking with confidence and a friendly tone</textarea>
+                    </div>
+
+                    <!-- Text Input -->
+                    <div class="form-group">
+                        <label class="form-label" for="vd-text">Text to Synthesize</label>
+                        <textarea class="form-textarea" id="vd-text"
+                            placeholder="Enter the text you want the designed voice to speak...">Welcome to the future of voice synthesis. With AI-powered technology, we can create any voice you imagine.</textarea>
+                        <div class="char-count"><span id="vd-char-count">0</span> chars</div>
+                    </div>
+
+                    <!-- Language -->
+                    <div class="form-group">
+                        <label class="form-label" for="vd-language">Language</label>
+                        <select class="form-select" id="vd-language">
+                            <option value="Auto">Auto Detect</option>
+                            <option value="Chinese">Chinese</option>
+                            <option value="English" selected>English</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Korean">Korean</option>
+                            <option value="German">German</option>
+                            <option value="French">French</option>
+                            <option value="Russian">Russian</option>
+                            <option value="Portuguese">Portuguese</option>
+                            <option value="Spanish">Spanish</option>
+                            <option value="Italian">Italian</option>
+                        </select>
+                    </div>
+
+                    <!-- Speed -->
+                    <div class="form-group">
+                        <label class="form-label">Speed</label>
+                        <div class="range-container">
+                            <span class="range-value">0.5x</span>
+                            <input type="range" class="range-slider" id="vd-speed" min="0.5" max="2" step="0.1"
+                                value="1">
+                            <span class="range-value" id="vd-speed-value">1.0x</span>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button class="btn btn-primary" id="vd-generate-btn">
+                        <span>▶</span> Generate Voice Design
+                    </button>
+                </div>
+
+                <!-- Audio Player -->
+                <div class="audio-player-container" id="vd-audio-container">
+                    <div class="audio-player-header">
+                        <span class="audio-player-title">Generated Audio</span>
+                        <span class="audio-player-meta" id="vd-audio-meta"></span>
+                    </div>
+                    <div class="waveform-container" id="vd-waveform"></div>
+                    <audio controls id="vd-audio-player"></audio>
+                    <div class="performance-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Generation Time</span>
+                            <span class="metric-value" id="vd-metric-time">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Audio Duration</span>
+                            <span class="metric-value" id="vd-metric-duration">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">RTF</span>
+                            <span class="metric-value" id="vd-metric-rtf">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Voice -->
+                <div class="save-voice-container" id="vd-save-voice" style="display: none;">
+                    <div class="save-voice-row">
+                        <input type="text" class="form-input" id="vd-save-name" placeholder="Name this voice...">
+                        <button class="btn btn-secondary" id="vd-save-voice-btn">Save to Voice Library</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== VOICE CLONE TAB ==================== -->
+            <section class="tab-panel" id="panel-voice-clone" role="tabpanel">
+                <div class="section-header">
+                    <h1 class="section-title">Voice Clone</h1>
+                    <p class="section-description">Clone any voice from a reference audio sample and generate new speech
+                    </p>
+                </div>
+
+                <div class="two-column">
+                    <!-- Left Column: Reference Audio -->
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Reference Audio</h3>
+                            </div>
+
+                            <!-- New Tab Navigation -->
+                            <div class="card-sub-tabs">
+                                <button class="card-sub-tab active" data-target="vc-tab-upload">Upload File</button>
+                                <button class="card-sub-tab" data-target="vc-tab-record">Microphone</button>
+                            </div>
+
+                            <!-- Upload Tab Content -->
+                            <div id="vc-tab-upload" class="card-tab-content active">
+                                <!-- Upload Zone -->
+                                <div class="upload-zone" id="vc-upload-zone">
+                                    <div class="upload-zone-icon">📁</div>
+                                    <div class="upload-zone-text" data-i18n="uploadZoneText">Drop audio file here or
+                                        click
+                                        to upload</div>
+                                    <div class="upload-zone-hint" data-i18n="uploadZoneHint">Supports WAV, MP3, FLAC
+                                        (max
+                                        5MB, 60s)</div>
+                                    <input type="file" id="vc-file-input" accept="audio/*" hidden>
+                                </div>
+
+                                <!-- Upload/Recording Preview -->
+                                <div class="upload-preview" id="vc-upload-preview">
+                                    <div class="upload-file-info">
+                                        <span class="upload-file-name" id="vc-file-name">reference.wav</span>
+                                        <span class="upload-file-size" id="vc-file-size">1.2 MB</span>
+                                    </div>
+                                    <audio controls id="vc-ref-audio" style="width: 100%;"></audio>
+                                </div>
+                            </div>
+
+                            <!-- Record Tab Content -->
+                            <div id="vc-tab-record" class="card-tab-content">
+                                <!-- Recording Prompt -->
+                                <div class="recording-prompt" id="vc-recording-prompt">
+                                    <div class="recording-prompt-label" data-i18n="readAloud">📖 Read this text aloud:
+                                    </div>
+                                    <div class="recording-prompt-text" id="vc-prompt-text">
+                                        The quick brown fox jumps over the lazy dog. This sentence contains every letter
+                                        of
+                                        the alphabet and is perfect for voice sampling.
+                                    </div>
+                                    <div class="recording-prompt-hint" data-i18n="recordingTip">💡 Speak clearly and
+                                        naturally at your normal pace</div>
+                                </div>
+
+                                <!-- Recording Controls -->
+                                <div class="recording-section">
+                                    <div class="recording-controls">
+                                        <button class="btn btn-record" id="vc-record-btn">
+                                            <span class="record-icon">🎙️</span>
+                                            <span data-i18n="startRecording">Start Recording</span>
+                                        </button>
+                                        <button class="btn btn-stop-record" id="vc-stop-btn" style="display: none;">
+                                            <span>⏹️</span>
+                                            <span data-i18n="stopRecording">Stop Recording</span>
+                                        </button>
+                                    </div>
+                                    <div class="recording-indicator" id="vc-recording-indicator" style="display: none;">
+                                        <div class="recording-dot"></div>
+                                        <span data-i18n="recording">Recording...</span>
+                                        <span id="vc-record-time">0:00</span>
+                                    </div>
+                                </div>
+
+                                <!-- Recording Preview -->
+                                <div class="upload-preview" id="vc-record-preview">
+                                    <div class="upload-file-info">
+                                        <span class="upload-file-name" id="vc-record-name">recording.webm</span>
+                                        <span class="upload-file-size" id="vc-record-size">0 KB</span>
+                                    </div>
+                                    <audio controls id="vc-record-audio" style="width: 100%;"></audio>
+                                </div>
+                            </div>
+
+                            <!-- Reference Text -->
+                            <div class="form-group" style="margin-top: var(--space-lg);">
+                                <label class="form-label" for="vc-ref-text">Reference Text (transcript of the
+                                    audio)</label>
+                                <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+                                    <button class="btn btn-secondary btn-sm" id="vc-transcribe-btn">Auto-Transcribe</button>
+                                    <span id="vc-transcribe-status" style="font-size: 0.75rem; color: var(--text-muted); align-self: center;"></span>
+                                </div>
+                                <textarea class="form-textarea" id="vc-ref-text"
+                                    placeholder="Enter the exact words spoken in the reference audio, or use Auto-Transcribe..."></textarea>
+                            </div>
+
+                            <!-- X-Vector Mode -->
+                            <div class="form-group">
+                                <div class="toggle-container">
+                                    <div class="toggle" id="vc-xvector-toggle"></div>
+                                    <span class="toggle-label">X-Vector Only Mode (no transcript needed, lower
+                                        quality)</span>
+                                </div>
+                            </div>
+
+                            <!-- Voice Name Input -->
+                            <div class="form-group" style="margin-bottom: var(--space-sm);">
+                                <label class="form-label" for="vc-voice-name">Voice Name (Optional)</label>
+                                <input type="text" class="form-input" id="vc-voice-name"
+                                    placeholder="e.g., Morgan Freeman, British Narrator, My Voice...">
+                            </div>
+
+                            <!-- Create Prompt Button -->
+                            <button class="btn btn-secondary" id="vc-create-prompt-btn" style="width: 100%;">
+                                Save to Library (Optional)
+                            </button>
+                            <p
+                                style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-xs); margin-bottom: var(--space-md);">
+                                Save this voice to the list below for faster reuse later. <br>
+                                Not required for immediate generation.
+                            </p>
+
+                            <!-- Saved Voices -->
+                            <div class="saved-prompts" id="vc-saved-prompts">
+                                <label class="form-label">Saved Voices</label>
+                                <div class="saved-prompts-controls">
+                                    <select class="form-select" id="vc-prompts-dropdown">
+                                        <option value="">-- Select a saved voice --</option>
+                                    </select>
+                                    <button class="btn btn-danger btn-icon" id="vc-delete-prompt-btn" title="Delete selected voice" disabled>&#10005;</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Generation -->
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Generate with Cloned Voice</h3>
+                            </div>
+
+                            <!-- Output Mode Toggle -->
+                            <div class="form-group">
+                                <div class="toggle-container">
+                                    <div class="toggle" id="vc-streaming-toggle"></div>
+                                    <span class="toggle-label">Streaming Mode</span>
+                                </div>
+                                <p class="toggle-hint" id="vc-streaming-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-xs);">
+                                    Single output: Complete audio, consistent quality, 4000 char limit
+                                </p>
+                            </div>
+
+                            <!-- Target Text -->
+                            <div class="form-group">
+                                <label class="form-label" for="vc-text">Text to Synthesize</label>
+                                <textarea class="form-textarea" id="vc-text"
+                                    placeholder="Enter what you want the cloned voice to say..."
+                                    maxlength="4000">This is my cloned voice speaking new words that I never actually said.</textarea>
+                                <div class="char-count"><span id="vc-char-count">0</span>/<span id="vc-char-limit">4000</span></div>
+                            </div>
+
+                            <!-- Language -->
+                            <div class="form-group">
+                                <label class="form-label" for="vc-language">Language</label>
+                                <select class="form-select" id="vc-language">
+                                    <option value="Auto">Auto Detect</option>
+                                    <option value="Chinese">Chinese</option>
+                                    <option value="English" selected>English</option>
+                                    <option value="Japanese">Japanese</option>
+                                    <option value="Korean">Korean</option>
+                                    <option value="German">German</option>
+                                    <option value="French">French</option>
+                                    <option value="Russian">Russian</option>
+                                    <option value="Portuguese">Portuguese</option>
+                                    <option value="Spanish">Spanish</option>
+                                    <option value="Italian">Italian</option>
+                                </select>
+                            </div>
+
+                            <!-- Speed -->
+                            <div class="form-group">
+                                <label class="form-label">Speed</label>
+                                <div class="range-container">
+                                    <span class="range-value">0.5x</span>
+                                    <input type="range" class="range-slider" id="vc-speed" min="0.5" max="2" step="0.1"
+                                        value="1">
+                                    <span class="range-value" id="vc-speed-value">1.0x</span>
+                                </div>
+                            </div>
+
+                            <!-- Generate Button -->
+                            <button class="btn btn-primary" id="vc-generate-btn" style="width: 100%;">
+                                <span>▶</span> Clone Voice & Generate
+                            </button>
+                        </div>
+
+                        <!-- Audio Player -->
+                        <div class="audio-player-container" id="vc-audio-container">
+                            <div class="audio-player-header">
+                                <span class="audio-player-title">Cloned Voice Output</span>
+                                <span class="audio-player-meta" id="vc-audio-meta"></span>
+                            </div>
+                            <!-- Streaming Progress (shown during streaming playback) -->
+                            <div class="streaming-progress" id="vc-streaming-progress" style="display: none;">
+                                <div class="streaming-controls">
+                                    <button class="streaming-play-pause" id="vc-streaming-play-pause" title="Pause">
+                                        <span class="pause-icon">⏸</span>
+                                        <span class="play-icon" style="display: none;">▶</span>
+                                    </button>
+                                    <div class="streaming-info">
+                                        <div class="streaming-status">
+                                            <span class="streaming-icon">🔊</span>
+                                            <span class="streaming-text" id="vc-streaming-text">Streaming...</span>
+                                        </div>
+                                        <div class="streaming-time">
+                                            <span id="vc-streaming-current">0:00</span>
+                                            <span>/</span>
+                                            <span id="vc-streaming-total">--:--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="streaming-waveform" id="vc-streaming-waveform"></div>
+                                <div class="streaming-bar-container">
+                                    <div class="streaming-bar" id="vc-streaming-bar"></div>
+                                </div>
+                            </div>
+                            <div class="waveform-container" id="vc-waveform"></div>
+                            <audio controls id="vc-audio-player"></audio>
+                            <div class="performance-metrics">
+                                <div class="metric">
+                                    <span class="metric-label">Generation Time</span>
+                                    <span class="metric-value" id="vc-metric-time">--</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Audio Duration</span>
+                                    <span class="metric-value" id="vc-metric-duration">--</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">RTF</span>
+                                    <span class="metric-value" id="vc-metric-rtf">--</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Cache</span>
+                                    <span class="metric-value" id="vc-metric-cache">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SETTINGS TAB ==================== -->
+            <section class="tab-panel" id="panel-settings" role="tabpanel">
+                <div class="section-header">
+                    <h1 class="section-title">Settings</h1>
+                    <p class="section-description">Configure API authentication, view server status, and manage voice
+                        cache</p>
+                </div>
+
+                <div class="settings-grid">
+                    <!-- API Key -->
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">🔑 API Key</h3>
+                        <div class="form-group">
+                            <label class="form-label" for="api-key">Your API Key</label>
+                            <div class="api-key-input-container">
+                                <input type="password" class="form-input api-key-input" id="api-key"
+                                    placeholder="Enter your API key...">
+                                <button class="api-key-toggle" id="api-key-toggle" title="Show/Hide">👁️</button>
+                            </div>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-sm);">
+                                Required for all API requests. Stored locally in your browser.
+                            </p>
+                        </div>
+                        <button class="btn btn-secondary" id="save-api-key">Save API Key</button>
+                    </div>
+
+                    <!-- Server Status -->
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">🖥️ Server Status</h3>
+                        <div class="status-cards">
+                            <div class="status-card">
+                                <div class="status-card-label">Custom Voice</div>
+                                <div class="status-card-value not-loaded" id="status-custom-voice">--</div>
+                            </div>
+                            <div class="status-card">
+                                <div class="status-card-label">Voice Design</div>
+                                <div class="status-card-value not-loaded" id="status-voice-design">--</div>
+                            </div>
+                            <div class="status-card">
+                                <div class="status-card-label">Base Model</div>
+                                <div class="status-card-value not-loaded" id="status-base">--</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" id="refresh-status"
+                            style="margin-top: var(--space-md); width: 100%;">
+                            Refresh Status
+                        </button>
+                    </div>
+
+                    <!-- Cache Stats -->
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">📊 Voice Cache</h3>
+                        <div id="cache-stats">
+                            <div class="cache-stat">
+                                <span class="cache-stat-label">Status</span>
+                                <span class="cache-stat-value" id="cache-enabled">--</span>
+                            </div>
+                            <div class="cache-stat">
+                                <span class="cache-stat-label">Size</span>
+                                <span class="cache-stat-value" id="cache-size">--</span>
+                            </div>
+                            <div class="cache-stat">
+                                <span class="cache-stat-label">Hit Rate</span>
+                                <span class="cache-stat-value" id="cache-hit-rate">--</span>
+                            </div>
+                            <div class="cache-stat">
+                                <span class="cache-stat-label">Total Requests</span>
+                                <span class="cache-stat-value" id="cache-requests">--</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
+                            <button class="btn btn-secondary" id="refresh-cache" style="flex: 1;">Refresh</button>
+                            <button class="btn btn-danger" id="clear-cache" style="flex: 1;">Clear Cache</button>
+                        </div>
+                    </div>
+
+                    <!-- API Info -->
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">📚 API Documentation</h3>
+                        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
+                            Access the full API documentation and interactive testing tools.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                            <a href="/docs" target="_blank" class="btn btn-secondary" style="text-decoration: none;">
+                                📖 Swagger UI
+                            </a>
+                            <a href="/redoc" target="_blank" class="btn btn-secondary" style="text-decoration: none;">
+                                📋 ReDoc
+                            </a>
+                            <a href="/openapi.json" target="_blank" class="btn btn-secondary"
+                                style="text-decoration: none;">
+                                📄 OpenAPI JSON
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- API Docs Toggle Button -->
+    <button class="api-docs-toggle" id="api-docs-toggle" title="API Documentation">
+        <span class="api-docs-toggle-icon">📚</span>
+        API
+    </button>
+
+    <!-- API Docs Panel -->
+    <div class="api-docs-panel" id="api-docs-panel">
+        <div class="api-docs-header">
+            <span class="api-docs-title">
+                <span>📚</span>
+                API Reference
+            </span>
+            <button class="api-docs-close" id="api-docs-close" title="Close">✕</button>
+        </div>
+        <div class="api-docs-content" id="api-docs-content">
+            <!-- Content will be populated by JavaScript based on active tab -->
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,10,15,0.9); z-index: 10000; flex-direction: column; align-items: center; justify-content: center;">
+        <div class="vu-meter">
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+        </div>
+        <p style="margin-top: var(--space-md); color: var(--text-secondary); font-family: var(--font-display);">
+            Generating audio...</p>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

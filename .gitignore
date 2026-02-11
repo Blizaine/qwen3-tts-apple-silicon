@@ -3,6 +3,7 @@ models/
 
 # Virtual environment
 .venv/
+env/
 
 # Temp files
 temp_*/
