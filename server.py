@@ -51,6 +51,37 @@ OUTPUTS_DIR = BASE_DIR / "outputs"
 STATIC_DIR = BASE_DIR / "static"
 SAMPLE_RATE = 24000
 
+
+def ensure_wav_bytes(audio_bytes: bytes) -> bytes:
+    """Convert any audio format (MP3, M4A, etc.) to proper PCM WAV bytes.
+
+    Returns the original bytes unchanged if already a valid WAV file.
+    """
+    # Check for RIFF/WAV header
+    if audio_bytes[:4] == b'RIFF' and audio_bytes[8:12] == b'WAVE':
+        return audio_bytes
+
+    logger.info("Converting non-WAV audio to WAV format")
+    import tempfile
+    import soundfile as sf
+    import librosa
+
+    # Write original bytes to temp file for librosa to decode
+    with tempfile.NamedTemporaryFile(suffix=".audio", delete=False) as tmp_in:
+        tmp_in.write(audio_bytes)
+        tmp_in_path = tmp_in.name
+
+    try:
+        y, sr = librosa.load(tmp_in_path, sr=None, mono=False)
+        # Write as proper WAV
+        wav_buffer = io.BytesIO()
+        sf.write(wav_buffer, y.T if y.ndim > 1 else y, sr, format="WAV", subtype="PCM_16")
+        wav_buffer.seek(0)
+        return wav_buffer.read()
+    finally:
+        if os.path.exists(tmp_in_path):
+            os.unlink(tmp_in_path)
+
 # Model paths mapping
 MODEL_PATHS = {
     "custom_voice_pro": "Qwen3-TTS-12Hz-1.7B-CustomVoice-8bit",
@@ -417,7 +448,7 @@ async def clone_voice(request: VoiceCloneRequest):
 
         if request.ref_audio_base64:
             import tempfile
-            audio_bytes = base64.b64decode(request.ref_audio_base64)
+            audio_bytes = ensure_wav_bytes(base64.b64decode(request.ref_audio_base64))
             temp_ref_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
             temp_ref_file.write(audio_bytes)
             temp_ref_file.close()
@@ -487,7 +518,7 @@ async def clone_voice_stream(request: StreamingVoiceCloneRequest):
             import tempfile
             temp_ref_file = None
             if request.ref_audio_base64:
-                audio_bytes = base64.b64decode(request.ref_audio_base64)
+                audio_bytes = ensure_wav_bytes(base64.b64decode(request.ref_audio_base64))
                 temp_ref_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
                 temp_ref_file.write(audio_bytes)
                 temp_ref_file.close()
@@ -603,9 +634,16 @@ def load_saved_voices():
                     with open(metadata_file, "r") as f:
                         metadata = json.load(f)
 
-                    # Load audio as base64
+                    # Load audio as base64 (convert to WAV if needed)
                     with open(audio_file, "rb") as f:
-                        audio_base64 = base64.b64encode(f.read()).decode("utf-8")
+                        raw_bytes = f.read()
+                    wav_bytes = ensure_wav_bytes(raw_bytes)
+                    if wav_bytes is not raw_bytes:
+                        # Re-save the converted file
+                        with open(audio_file, "wb") as f:
+                            f.write(wav_bytes)
+                        logger.info(f"Converted {voice_dir.name}/audio.wav to proper WAV format")
+                    audio_base64 = base64.b64encode(wav_bytes).decode("utf-8")
 
                     prompt_id = voice_dir.name
                     saved_voice_prompts[prompt_id] = {
@@ -636,8 +674,9 @@ def save_voice_to_disk(prompt_id: str, data: dict):
     with open(voice_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
-    # Save audio as WAV file
+    # Save audio as WAV file (convert if needed)
     audio_bytes = base64.b64decode(data["ref_audio_base64"])
+    audio_bytes = ensure_wav_bytes(audio_bytes)
     with open(voice_dir / "audio.wav", "wb") as f:
         f.write(audio_bytes)
 
@@ -732,9 +771,9 @@ async def generate_with_voice_clone_prompt(request: GenerateWithPromptRequest):
 
         model = get_available_model("base")
 
-        # Decode reference audio
+        # Decode reference audio (ensure WAV format)
         import tempfile
-        audio_bytes = base64.b64decode(prompt_data["ref_audio_base64"])
+        audio_bytes = ensure_wav_bytes(base64.b64decode(prompt_data["ref_audio_base64"]))
         temp_ref_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         temp_ref_file.write(audio_bytes)
         temp_ref_file.close()
@@ -803,9 +842,9 @@ async def stream_generate_with_voice_clone_prompt(request: StreamingGenerateWith
             model = get_available_model("base")
             logger.info("Model loaded")
 
-            # Prepare reference audio
+            # Prepare reference audio (ensure WAV format)
             import tempfile
-            audio_bytes = base64.b64decode(prompt_data["ref_audio_base64"])
+            audio_bytes = ensure_wav_bytes(base64.b64decode(prompt_data["ref_audio_base64"]))
             temp_ref_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
             temp_ref_file.write(audio_bytes)
             temp_ref_file.close()
