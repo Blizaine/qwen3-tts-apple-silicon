@@ -1072,14 +1072,9 @@ async def demo_page():
 
 @app.get("/")
 async def root():
-    """Root endpoint with API information."""
-    return {
-        "name": "Qwen3-TTS MLX API Server",
-        "version": "1.0.0",
-        "backend": "Apple MLX",
-        "demo": "/demo",
-        "docs": "/docs",
-    }
+    """Redirect root to demo page for proxy compatibility."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/demo")
 
 
 if __name__ == "__main__":
