@@ -2547,9 +2547,9 @@ function initToggles() {
                 if (textArea) textArea.removeAttribute('maxlength');
                 if (charLimit) charLimit.textContent = 'unlimited';
             } else {
-                if (hint) hint.textContent = 'Single output: Complete audio, consistent quality, 4000 char limit';
-                if (textArea) textArea.setAttribute('maxlength', '4000');
-                if (charLimit) charLimit.textContent = '4000';
+                if (hint) hint.textContent = 'Single output: Complete audio, consistent quality, 2000 char limit';
+                if (textArea) textArea.setAttribute('maxlength', '2000');
+                if (charLimit) charLimit.textContent = '2000';
             }
         };
     }

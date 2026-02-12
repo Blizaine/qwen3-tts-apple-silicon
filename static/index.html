@@ -166,7 +166,7 @@
                 <!-- Save Voice -->
                 <div class="save-voice-container" id="cv-save-voice" style="display: none;">
                     <div class="save-voice-row">
-                        <input type="text" class="form-input" id="cv-save-name" placeholder="Name this voice...">
+                        <input type="text" class="form-input" id="cv-save-name" placeholder="Name this voice..." autocomplete="off">
                         <button class="btn btn-secondary" id="cv-save-voice-btn">Save to Voice Library</button>
                     </div>
                 </div>
@@ -282,7 +282,7 @@
                 <!-- Save Voice -->
                 <div class="save-voice-container" id="vd-save-voice" style="display: none;">
                     <div class="save-voice-row">
-                        <input type="text" class="form-input" id="vd-save-name" placeholder="Name this voice...">
+                        <input type="text" class="form-input" id="vd-save-name" placeholder="Name this voice..." autocomplete="off">
                         <button class="btn btn-secondary" id="vd-save-voice-btn">Save to Voice Library</button>
                     </div>
                 </div>
@@ -403,7 +403,7 @@
                             <div class="form-group" style="margin-bottom: var(--space-sm);">
                                 <label class="form-label" for="vc-voice-name">Voice Name (Optional)</label>
                                 <input type="text" class="form-input" id="vc-voice-name"
-                                    placeholder="e.g., Morgan Freeman, British Narrator, My Voice...">
+                                    placeholder="e.g., Morgan Freeman, British Narrator, My Voice..." autocomplete="off">
                             </div>
 
                             <!-- Create Prompt Button -->
@@ -443,7 +443,7 @@
                                     <span class="toggle-label">Streaming Mode</span>
                                 </div>
                                 <p class="toggle-hint" id="vc-streaming-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: var(--space-xs);">
-                                    Single output: Complete audio, consistent quality, 4000 char limit
+                                    Single output: Complete audio, consistent quality, 2000 char limit
                                 </p>
                             </div>
 
@@ -452,8 +452,8 @@
                                 <label class="form-label" for="vc-text">Text to Synthesize</label>
                                 <textarea class="form-textarea" id="vc-text"
                                     placeholder="Enter what you want the cloned voice to say..."
-                                    maxlength="4000">This is my cloned voice speaking new words that I never actually said.</textarea>
-                                <div class="char-count"><span id="vc-char-count">0</span>/<span id="vc-char-limit">4000</span></div>
+                                    maxlength="2000">This is my cloned voice speaking new words that I never actually said.</textarea>
+                                <div class="char-count"><span id="vc-char-count">0</span>/<span id="vc-char-limit">2000</span></div>
                             </div>
 
                             <!-- Language -->
