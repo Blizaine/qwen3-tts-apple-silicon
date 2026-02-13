@@ -18,10 +18,11 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-from fastapi import FastAPI, HTTPException, Response, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 import re
 import json as json_module
 from pydantic import BaseModel, Field
@@ -145,7 +146,7 @@ class CustomVoiceRequest(BaseModel):
     text: str
     language: str = "Auto"
     speaker: str = "Vivian"
-    instruct: str = ""
+    instruct: Optional[str] = ""
     speed: float = 1.0
     response_format: str = "base64"
 
@@ -339,6 +340,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error on {request.method} {request.url.path}: {exc.errors()}")
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
 # Mount static files
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -361,6 +368,7 @@ async def generate_custom_voice(request: CustomVoiceRequest):
             voice=request.speaker,
             instruct=request.instruct or "Normal tone",
             speed=request.speed,
+            lang_code=request.language.lower(),
         )
 
         if request.response_format == "base64":
@@ -408,6 +416,7 @@ async def generate_voice_design(request: VoiceDesignRequest):
             model,
             text=request.text,
             instruct=request.instruct,
+            lang_code=request.language.lower(),
         )
 
         if request.response_format == "base64":
@@ -460,6 +469,7 @@ async def clone_voice(request: VoiceCloneRequest):
                 text=request.text,
                 ref_audio=ref_audio_path,
                 ref_text=request.ref_text or ".",
+                lang_code=request.language.lower(),
             )
 
             if request.response_format == "base64":
@@ -549,6 +559,7 @@ async def clone_voice_stream(request: StreamingVoiceCloneRequest):
                         text=chunk_text_content,
                         ref_audio=ref_audio_path,
                         ref_text=request.ref_text or ".",
+                        lang_code=request.language.lower(),
                     )
 
                     # Convert to base64
@@ -784,6 +795,7 @@ async def generate_with_voice_clone_prompt(request: GenerateWithPromptRequest):
                 text=request.text,
                 ref_audio=temp_ref_file.name,
                 ref_text=prompt_data["ref_text"] or ".",
+                lang_code=request.language.lower(),
             )
 
             if request.response_format == "base64":
@@ -876,6 +888,7 @@ async def stream_generate_with_voice_clone_prompt(request: StreamingGenerateWith
                         text=chunk_text_content,
                         ref_audio=temp_ref_file.name,
                         ref_text=prompt_data["ref_text"] or ".",
+                        lang_code=request.language.lower(),
                     )
                     logger.info(f"Chunk {i+1} generated, audio shape: {audio_data.shape if hasattr(audio_data, 'shape') else len(audio_data)}")
 
